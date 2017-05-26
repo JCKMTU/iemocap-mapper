@@ -5,8 +5,21 @@
 """
 
 import numpy as np
+from numpy import genfromtxt
 from collections import OrderedDict
+from pyswarm import pso
 import bpy
+from time import sleep
+
+
+def fitness(A, B):
+    #calculates MSE
+    # can this be scale invariant?
+    return ((np.abs(A) - np.abs(B)) ** 2).mean(axis=None)
+    
+def loadData(path):
+    data = genfromtxt(path, delimiter=" ", skip_header=2)
+    return data[:,2:]
 
 def initializeBlender():
     #Delete all drivers, so that we have control over SKeys
@@ -26,8 +39,11 @@ def evaluateShapekeys(keys):
     for key, value in keys.items():
         setShapekey(key, value)
     
+    # Important: update
+    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+    bpy.context.scene.update()
+
     output = OrderedDict()
-    
     
     for marker in markers:
         output[marker] = getMarkerPos(marker)
@@ -45,7 +61,7 @@ def evaluateShapekeys(keys):
         output_array.append(output[marker][2])
     
     return output, output_array
-        
+
 # Shapekeys:
 shapekeys = []
 ob = bpy.data.objects["head_geo"].data.shape_keys.key_blocks
@@ -60,8 +76,33 @@ markers = ["CH1", "CH2", "CH3", "FH1", "FH2", "FH3", "LC1", "LC2", "LC3", "LC4",
 
 initializeBlender()
 
+data = loadData('/home/ralf/HR/IEMOCAP/IEMOCAP_full_release/Session3/dialog/MOCAP_rotated/Ses03F_impro01.txt')
+
+data_frame = data[1]
+
+
+def banana(theta):
+    assert(len(theta) == len(shapekeys))
+    
+    shp = {}
+    for i, key in enumerate(shapekeys):
+        shp[key] = theta[i]
+    
+    _, output = evaluateShapekeys(shp)
+    
+    return fitness(output, data_frame)
+        
+    
+lb = np.zeros(len(shapekeys))
+ub = np.ones(len(shapekeys))
+
+#pso(banana, lb, ub)
+
+
+"""
 shp = {}
 for key in shapekeys:
-    shp[key] = 0
-
-print(evaluateShapekeys(shp))
+    shp[key] = np.random.rand()
+output = evaluateShapekeys(shp)[1]
+print("fitness %f" % fitness(output, data[1]))
+"""
