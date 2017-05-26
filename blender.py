@@ -11,11 +11,13 @@ from pyswarm import pso
 import bpy
 from time import sleep
 
+def sigmoid(x):
+  return 1.0 / (1.0 + np.exp(-x))
 
 def fitness(A, B):
     #calculates MSE
     # can this be scale invariant?
-    return ((np.abs(A) - np.abs(B)) ** 2).mean(axis=None)
+    return ((A-B) ** 2).mean(axis=None)
     
 def loadData(path):
     data = genfromtxt(path, delimiter=" ", skip_header=2)
@@ -55,7 +57,7 @@ def evaluateShapekeys(keys):
     
     for marker in markers:
         output[marker] -= ref_vec
-        output[marker] *= 280 ## Arbitrary scaling to make it more close to training data
+        output[marker] *= 100 ## Arbitrary scaling to make it more close to training data
         output_array.append(output[marker][0])
         output_array.append(output[marker][1])
         output_array.append(output[marker][2])
@@ -80,9 +82,32 @@ data = loadData('/home/ralf/HR/IEMOCAP/IEMOCAP_full_release/Session3/dialog/MOCA
 
 data_frame = data[1]
 
+"""
+def model(data, theta):
+    weights = theta.reshape([len(data), -1])
+    return sigmoid(np.matmul(data, weights))
 
 def banana(theta):
-    assert(len(theta) == len(shapekeys))
+    #assert(len(theta) == len(shapekeys))
+    frame = [np.nan]
+    
+    while np.isnan(np.sum(frame)):
+        frame = data[np.random.randint(1,data.shape[0])]
+    
+    evaluation = model(frame, theta)
+    
+    shp = {}
+    for i, key in enumerate(shapekeys):
+        shp[key] = evaluation[i]
+    
+    _, output = evaluateShapekeys(shp)
+    
+    return fitness(output, frame)
+"""    
+
+def banana(theta):
+    #assert(len(theta) == len(shapekeys))
+    frame = data[1442]
     
     shp = {}
     for i, key in enumerate(shapekeys):
@@ -90,11 +115,13 @@ def banana(theta):
     
     _, output = evaluateShapekeys(shp)
     
-    return fitness(output, data_frame)
-        
+    return fitness(output, frame)
     
+    
+        
 lb = np.zeros(len(shapekeys))
-ub = np.ones(len(shapekeys))
+lb = np.ones(nrOfWeights) * 0.0
+ub = np.ones(nrOfWeights) * 1.0
 
 #pso(banana, lb, ub)
 
