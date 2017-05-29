@@ -14,10 +14,42 @@ from time import sleep
 def sigmoid(x):
   return 1.0 / (1.0 + np.exp(-x))
 
+def calcVecToOthers(M, m):
+    refPoint = Vector((M[(m*3)], M[(m*3)+1], M[(m*3)+2]))
+    
+    # Get Max distance for normalization:
+    maxDist = 0.0
+    for i in range(int(len(M)/3)):
+        if m != i:
+            point = Vector((M[(i*3)], M[(i*3)+1], M[(i*3)+2]))
+            dist = np.sqrt(np.power(refPoint[0] - point[0],2) + np.power(refPoint[1] - point[1],2) + np.power(refPoint[2] - point[2],2))
+            if dist > maxDist:
+                maxDist = dist
+
+    # Output Vector
+    outputVec = Vector((0,0,0))
+    for i in range(int(len(M)/3)):
+        if m != i:
+            point = Vector((M[(i*3)], M[(i*3)+1], M[(i*3)+2]))
+            diff = (refPoint - point) / maxDist
+            diff += Vector((0.00001, 0.00001, 0.00001))
+            outputVec += Vector((1/diff[0], 1/diff[1], 1/diff[2]))
+    
+    return outputVec
+
+
 def fitness(A, B):
-    #calculates MSE
-    # can this be scale invariant?
-    return ((A-B) ** 2).mean(axis=None)
+    # Input is lists of XYZXYZ,...
+    assert(len(A) == len(B))
+    
+    fitness = 0
+    
+    for i in range(int(len(A)/3)):
+        vecA = calcVecToOthers(A, i)
+        vecB = calcVecToOthers(B, i)
+        fitness =+ np.sqrt(np.power(vecA[0] - vecB[0],2) + np.power(vecA[1] - vecB[1],2) + np.power(vecA[2] - vecB[2],2))
+        
+    return fitness
     
 def loadData(path):
     data = genfromtxt(path, delimiter=" ", skip_header=2)
@@ -56,8 +88,8 @@ def evaluateShapekeys(keys):
     output_array = []
     
     for marker in markers:
-        output[marker] -= ref_vec
-        output[marker] *= 100 ## Arbitrary scaling to make it more close to training data
+        #output[marker] -= ref_vec
+        #output[marker] *= 100 ## Arbitrary scaling to make it more close to training data
         output_array.append(output[marker][0])
         output_array.append(output[marker][1])
         output_array.append(output[marker][2])
@@ -107,7 +139,7 @@ def banana(theta):
 
 def banana(theta):
     #assert(len(theta) == len(shapekeys))
-    frame = data[1442]
+    frame = data[170]
     
     shp = {}
     for i, key in enumerate(shapekeys):
@@ -115,13 +147,16 @@ def banana(theta):
     
     _, output = evaluateShapekeys(shp)
     
-    return fitness(output, frame)
+    return -fitness(output, frame)
     
     
         
+#lb = np.zeros(len(shapekeys))
+#lb = np.ones(nrOfWeights) * 0.0
+#ub = np.ones(nrOfWeights) * 1.0
+
 lb = np.zeros(len(shapekeys))
-lb = np.ones(nrOfWeights) * 0.0
-ub = np.ones(nrOfWeights) * 1.0
+ub = np.ones(len(shapekeys))
 
 #pso(banana, lb, ub)
 
