@@ -10,6 +10,23 @@ from collections import OrderedDict
 PATH = '/home/masa/Programming/my_repo/iemocap-mapper/IEMOCAP_full_release/Session3/dialog/MOCAP_rotated/Ses03F_impro01.txt'
 
 # There are 55 markers in IEMOCAP data set.
+# Indice of markers in sophia model.
+ORIG_MARKERS = ["CH1", "CH2", "CH3",
+                "FH1", "FH2", "FH3",
+                "LC1", "LC2", "LC3", "LC4", "LC5", "LC6", "LC7", "LC8",
+                "RC1", "RC2", "RC3", "RC4", "RC5", "RC6", "RC7", "RC8",
+                "LLID",
+                "RLID",
+                "MH", "MNOSE", "LNSTRL", "TNOSE", "RNSTRL",
+                "LBM0", "LBM1", "LBM2", "LBM3",
+                "RBM0", "RBM1", "RBM2", "RBM3",
+                "LBR01", "LBR02", "LBR03", "LBR04",
+                "RBR01", "RBR02", "RBR03", "RBR04",
+                "MOU1", "MOU2", "MOU3", "MOU4", "MOU5", "MOU6", "MOU7", "MOU8",
+                "LHD",
+                "RHD"]
+
+# Indice of markers in iemocap dataset
 MARKERS = ["MO_CH1", "MO_CH2", "MO_CH3",
            "MO_FH1", "MO_FH2", "MO_FH3",
            "MO_LC1", "MO_LC2", "MO_LC3", "MO_LC4", "MO_LC5", "MO_LC6", "MO_LC7", "MO_LC8",
@@ -25,16 +42,14 @@ MARKERS = ["MO_CH1", "MO_CH2", "MO_CH3",
            "MO_LHD",
            "MO_RHD"]
 
-ORIG_MARKERS = ["CH1", "CH2", "CH3", "FH1", "FH2", "FH3", "LC1", "LC2", "LC3", "LC4", "LC5", "LC6", "LC7", "LC8", "RC1", "RC2", "RC3", "RC4", "RC5", "RC6", "RC7", "RC8", "LLID", "RLID", "MH", "MNOSE", "LNSTRL", "TNOSE", "RNSTRL", "LBM0", "LBM1", "LBM2", "LBM3", "RBM0", "RBM1", "RBM2", "RBM3", "LBR01", "LBR02", "LBR03", "LBR04", "RBR01", "RBR02", "RBR03", "RBR04", "MOU1", "MOU2", "MOU3", "MOU4", "MOU5", "MOU6", "MOU7", "MOU8", "LHD", "RHD"]
-
-
+# Global variable to track current frame of iemocap dataset
 FRAME = 0
 
-# Take mocap data per frame and store in ordered dictionary 'pos'
 def load_data(path):
     data = genfromtxt(path, delimiter=" ", skip_header=2)
     return data[:,2:]
 
+# Take mocap data per frame and store in ordered dictionary 'pos'
 def get_pos(data, index):
     pos = OrderedDict()
     i = 0
@@ -49,10 +64,12 @@ def get_pos(data, index):
 def get_sophia_marker_pos_at(name):
     return bpy.data.objects[name].matrix_world.to_translation()
 
+# Display all the marker positions of the markers in sophia model.
 def display_sophia_markers_pos():
     for marker in ORIG_MARKERS:
         print(marker, ":", bpy.data.objects[marker].matrix_world.to_translation())
 
+# Create a marker
 def create_marker_obj(size, name, coord):
     tnose_coord = bpy.data.objects['TNOSE'].matrix_world.to_translation()
     coord = coord + tnose_coord
@@ -73,6 +90,7 @@ def create_marker_obj(size, name, coord):
 
     return ob
 
+# Create markers
 def create_markers(data):
     pos = get_pos(data, 0)
     for marker in MARKERS:
@@ -87,10 +105,11 @@ def remove_markers():
         bpy.data.objects[marker].select = True
         bpy.ops.object.delete()
 
-def move_markers_x(num):
+# Move iemocap markers based on passed value. When x is positive <-, when it is neative ->
+def move_marker_x(num):
     for marker in MARKERS:
         ob = bpy.data.objects[marker]
-        ob.location = Vector((ob.location.x, ob.location.y - num, ob.location.z))
+        ob.location = Vector((ob.location.x, ob.location.y + num, ob.location.z))
     bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
     bpy.context.scene.update()
 
@@ -105,6 +124,7 @@ def forward():
         ob.location = (data[marker])
     FRAME += 5
 
+# Play iemocap dataset at once to see animation
 def play(data):
     rows = data.shape
 
@@ -119,7 +139,7 @@ def play(data):
         bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
         bpy.context.scene.update()
 
-# Get max pos of axis.
+# Get max pos of axis. I will make use of this? maybe?
 def get_max(data):
     x_high = 0
     y_high = 0
