@@ -10,10 +10,14 @@ from collections import OrderedDict
 from pyswarm import pso
 import bpy
 from time import sleep
+import numpy
+import scipy.spatial.distance as dst
+from scipy.optimize import minimize
 
 def sigmoid(x):
-  return 1.0 / (1.0 + np.exp(-x))
+  return 1.0 / (1.0 + np.exp(-x/16.0))
 
+"""
 def calcVecToOthers(M, m):
     refPoint = Vector((M[(m*3)], M[(m*3)+1], M[(m*3)+2]))
     
@@ -47,9 +51,28 @@ def fitness(A, B):
     for i in range(int(len(A)/3)):
         vecA = calcVecToOthers(A, i)
         vecB = calcVecToOthers(B, i)
-        fitness =+ np.sqrt(np.power(vecA[0] - vecB[0],2) + np.power(vecA[1] - vecB[1],2) + np.power(vecA[2] - vecB[2],2))
+        dist_magnitude = np.sqrt(np.power(vecA[0] - vecB[0],2) + np.power(vecA[1] - vecB[1],2) + np.power(vecA[2] - vecB[2],2))
+        vecA /= np.linalg.norm(vecA)
+        vecB /= np.linalg.norm(vecB)
+        dist_angle = np.arccos(np.clip(np.dot(vecA, vecB), -1.0, 1.0))
+        
+        fitness += (0.8 * np.abs(dist_angle)) + (0.2 + dist_magnitude)
         
     return fitness
+"""
+    
+#def fitness(A, B):
+#    Ar = np.array(A).reshape([-1,3])
+#    Br = np.array(B).reshape([-1,3])
+#    return dst.directed_hausdorff(Ar, Br)[0]
+
+def fitness(A, B):
+    Ar = np.array(A).reshape([-1,3])
+    Br = np.array(B).reshape([-1,3])
+    
+    return np.sqrt(np.power(Ar-Br,2)).sum()
+
+
     
 def loadData(path):
     data = genfromtxt(path, delimiter=" ", skip_header=2)
@@ -74,21 +97,21 @@ def evaluateShapekeys(keys):
         setShapekey(key, value)
     
     # Important: update
-    bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+    #bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
     bpy.context.scene.update()
 
     output = OrderedDict()
-    
+
     for marker in markers:
         output[marker] = getMarkerPos(marker)
-    
+
     # Normalize around noise point
     ref_vec = output["TNOSE"]
-    
+
     output_array = []
-    
+
     for marker in markers:
-        #output[marker] -= ref_vec
+        output[marker] -= ref_vec
         #output[marker] *= 100 ## Arbitrary scaling to make it more close to training data
         output_array.append(output[marker][0])
         output_array.append(output[marker][1])
@@ -114,10 +137,11 @@ data = loadData('/home/ralf/HR/IEMOCAP/IEMOCAP_full_release/Session3/dialog/MOCA
 
 data_frame = data[1]
 
-"""
+
 def model(data, theta):
-    weights = theta.reshape([len(data), -1])
-    return sigmoid(np.matmul(data, weights))
+    weights = theta[:-len(shapekeys)].reshape([len(data), -1])
+    biases = theta[-len(shapekeys):]
+    return sigmoid(np.matmul(data, weights) + biases)
 
 def banana(theta):
     #assert(len(theta) == len(shapekeys))
@@ -135,11 +159,26 @@ def banana(theta):
     _, output = evaluateShapekeys(shp)
     
     return fitness(output, frame)
-"""    
+   
 
+def playData(data, theta):
+    for frame in data:
+        evaluation = model(frame, theta)
+        shp = {}
+        for i, key in enumerate(shapekeys):
+            shp[key] = evaluation[i]
+        
+        _, output = evaluateShapekeys(shp)
+        
+        bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+        bpy.context.scene.update()
+        
+
+
+"""
 def banana(theta):
     #assert(len(theta) == len(shapekeys))
-    frame = data[170]
+    frame = data[100]
     
     shp = {}
     for i, key in enumerate(shapekeys):
@@ -147,16 +186,18 @@ def banana(theta):
     
     _, output = evaluateShapekeys(shp)
     
-    return -fitness(output, frame)
+    return fitness(output, frame)
+"""
     
-    
-        
+nrOfWeights = (len(data[1]) * len(shapekeys)) + len(shapekeys)        
 #lb = np.zeros(len(shapekeys))
-#lb = np.ones(nrOfWeights) * 0.0
-#ub = np.ones(nrOfWeights) * 1.0
+lb = np.ones(nrOfWeights) * -1.0
+ub = np.ones(nrOfWeights) * 1.0
 
-lb = np.zeros(len(shapekeys))
-ub = np.ones(len(shapekeys))
+#lb = np.zeros(len(shapekeys))
+#ub = np.ones(len(shapekeys))
+
+x0 = np.random.rand(nrOfWeights) * 0.1
 
 #pso(banana, lb, ub)
 
