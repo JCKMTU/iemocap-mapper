@@ -77,7 +77,7 @@ class Header(object):
         self.first_frame = 1
         self.last_frame = 1
         self.analog_per_frame = 0
-        self.frame_rate = 60.0
+        self.frame_rate = 120.0
 
         self.max_gap = 0
         self.scale_factor = -1.0
@@ -1046,8 +1046,8 @@ class Writer(Manager):
         points = self._frames[0]
         ppf = len(points)
 
-        print ppf
-        print len(labels)
+        print len(self._frames)
+        print self._point_rate
 
         # POINT group
         group = self.add_group(1, 'POINT', 'POINT group')
